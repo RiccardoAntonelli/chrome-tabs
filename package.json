@@ -2,7 +2,7 @@
 	"name": "chrome-tabs",
 	"displayName": "chrome-tabs",
 	"description": "An extension that lets you have chrome tabs in VS Code",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"engines": {
 		"vscode": "^1.69.0"
 	},
