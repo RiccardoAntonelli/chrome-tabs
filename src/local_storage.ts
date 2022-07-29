@@ -1,5 +1,5 @@
 "use strict";
-const { stringify, parse } = require("flatted");
+import { stringify, parse } from "flatted";
 import { Memento } from "vscode";
 import { TreeItem } from "./site";
 

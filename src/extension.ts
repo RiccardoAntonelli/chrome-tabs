@@ -48,6 +48,9 @@ export function activate(context: vscode.ExtensionContext) {
             break;
           }
         }
+        vscode.window.showInformationMessage(
+          "Deleted " + treeItems[deleteIndex].name
+        );
         delete treeItems[deleteIndex];
         localStorage.saveSites(treeItems);
       }
@@ -164,6 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("Edit Site: " + element);
     treeProvider.editTreeItem(previousElement, element);
     localStorage.saveSites(treeItems);
+    vscode.window.showInformationMessage("Edited successfully");
   };
 
   const addNewSite = async (): Promise<any> => {
@@ -211,7 +215,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (url === undefined) {
       return;
     }
-    vscode.window.showInformationMessage("created" + name);
+    vscode.window.showInformationMessage("Created " + name);
     url = "https://" + url + "/";
     saveNewSite(name, url, true);
   };
