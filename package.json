@@ -1,0 +1,133 @@
+{
+	"name": "chrome-tabs",
+	"displayName": "chrome-tabs",
+	"description": "An extension that lets you have chrome tabs in VS Code",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.69.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onCommand:pinnedSites.refresh",
+		"onCommand:pinnedSites.newSite",
+		"onCommand:pinnedSites.editSite",
+		"onCommand:pinnedSites.deleteSite",
+		"onCommand:pinnedSites.searchSite"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "pinnedSites.refresh",
+				"title": "Refresh",
+				"icon": {
+					"dark": "resources/dark/refresh.svg",
+					"light": "resources/light/refresh.svg"
+				}
+			},
+			{
+				"command": "pinnedSites.newSite",
+				"title": "New Site",
+				"icon": {
+					"dark": "resources/dark/add.svg",
+					"light": "resources/light/add.svg"
+				}
+			},
+			{
+				"command": "pinnedSites.editSite",
+				"title": "Edit Site",
+				"icon": {
+					"dark": "resources/dark/edit.svg",
+					"light": "resources/light/edit.svg"
+				}
+			},
+			{
+				"command": "pinnedSites.deleteSite",
+				"title": "Delete Site",
+				"icon": {
+					"dark": "resources/dark/trash.svg",
+					"light": "resources/light/trash.svg"
+				}
+			},
+			{
+				"command": "pinnedSites.searchSite",
+				"title": "Search Site",
+				"icon": {
+					"dark": "resources/dark/search.svg",
+					"light": "resources/light/search.svg"
+				}
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "chrome-tabs",
+					"title": "Chrome Tabs",
+					"icon": "resources/chrome.svg"
+				}
+			]
+		},
+		"views": {
+			"chrome-tabs": [
+				{
+					"id": "pinnedSites",
+					"name": "Sites"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "pinnedSites.refresh",
+					"when": "view == pinnedSites",
+					"group": "navigation"
+				},
+				{
+					"command": "pinnedSites.newSite",
+					"when": "view == pinnedSites",
+					"group": "navigation"
+				},
+				{
+					"command": "pinnedSites.searchSite",
+					"when": "view == pinnedSites",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "pinnedSites.editSite",
+					"when": "view == pinnedSites && viewItem == site",
+					"group": "inline"
+				},
+				{
+					"command": "pinnedSites.deleteSite",
+					"when": "view == pinnedSites && viewItem == site",
+					"group": "inline"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.69.0",
+		"@types/glob": "^7.1.3",
+		"@types/mocha": "^8.2.2",
+		"@types/node": "14.x",
+		"eslint": "^7.27.0",
+		"@typescript-eslint/eslint-plugin": "^4.26.0",
+		"@typescript-eslint/parser": "^4.26.0",
+		"glob": "^7.1.7",
+		"mocha": "^8.4.0",
+		"typescript": "^4.3.2",
+		"vscode-test": "^1.5.2"
+	}
+}
