@@ -1,4 +1,4 @@
-# chrome-tabs README
+# Chrome tabs
 
 This extension allows you to have chrome tabs directly in your editor.
 
@@ -24,15 +24,12 @@ Every saved website has two buttons:
 
 ## Release Notes
 
-Release notes of Chrome tabs
-
-### 1.0.0
-
-Initial release of chrome-tabs.
+[Release notes](https://github.com/RiccardoAntonelli/chrome-tabs/blob/master/CHANGELOG.md)
 
 ---
 
 ### For more information
 
 Riccardo antonelli
-- [Git Hub](http://github.com/RiccardoAntonelli)
+
+- [Git Hub](https://github.com/RiccardoAntonelli)
