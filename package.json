@@ -3,7 +3,7 @@
 	"displayName": "Chrome tabs",
 	"description": "An extension that lets you have chrome tabs in VS Code",
 	"publisher": "RiccardoAntonelli",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"engines": {
 		"vscode": "^1.69.0"
 	},
@@ -15,6 +15,7 @@
 		"Other"
 	],
 	"activationEvents": [
+		"onView:pinnedSites",
 		"onCommand:pinnedSites.refresh",
 		"onCommand:pinnedSites.newSite",
 		"onCommand:pinnedSites.editSite",
@@ -68,14 +69,14 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "chrome-tabs",
+					"id": "chromeTabs",
 					"title": "Chrome Tabs",
 					"icon": "resources/chrome.svg"
 				}
 			]
 		},
 		"views": {
-			"chrome-tabs": [
+			"chromeTabs": [
 				{
 					"id": "pinnedSites",
 					"name": "Sites"

@@ -11,6 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
   treeItems = localStorage.getSites();
 
   var treeProvider = new ChromeTreeProvider(localStorage);
+  treeProvider.refresh();
 
   vscode.window.registerTreeDataProvider("pinnedSites", treeProvider);
 
