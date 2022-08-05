@@ -2,13 +2,13 @@
 import * as vscode from "vscode";
 import { ChromeTreeProvider } from "./tree_provider";
 import { LocalStorageService } from "./local_storage";
-import { TreeItem } from "./site";
+import { Site, TreeItem } from "./site";
 
 export function activate(context: vscode.ExtensionContext) {
   var localStorage = new LocalStorageService(context.workspaceState);
 
-  var treeItems: TreeItem[];
-  treeItems = localStorage.getSites();
+  var sites: Site[];
+  sites = localStorage.getSites();
 
   var treeProvider = new ChromeTreeProvider(localStorage);
   treeProvider.refresh();
@@ -38,24 +38,21 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "pinnedSites.deleteSite",
-      (node: TreeItem) => {
-        treeProvider.deleteTreeItem(node);
-        let deleteIndex = -1;
-        for (let i = 0; i < treeItems.length; i++) {
-          if (treeItems[i].equals(node)) {
-            deleteIndex = i;
-            break;
-          }
+    vscode.commands.registerCommand("pinnedSites.deleteSite", (node: Site) => {
+      treeProvider.deleteTreeItem(new TreeItem(node));
+      let deleteIndex = -1;
+      for (let i = 0; i < sites.length; i++) {
+        if (sites[i].equals(node)) {
+          deleteIndex = i;
+          break;
         }
-        vscode.window.showInformationMessage(
-          "Deleted " + treeItems[deleteIndex].name
-        );
-        delete treeItems[deleteIndex];
-        localStorage.saveSites(treeItems);
       }
-    )
+      vscode.window.showInformationMessage(
+        "Deleted " + sites[deleteIndex].name
+      );
+      delete sites[deleteIndex];
+      localStorage.saveSites(sites);
+    })
   );
 
   context.subscriptions.push(
@@ -74,7 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
     var url = await vscode.window.showInputBox({
       prompt: "Search site - ",
       placeHolder: "Site url | (www.sitename.domain)",
-      validateInput: (text) => {
+      /*validateInput: (text) => {
         //return text.includes("www.") ? "" : "Add www.";
         var validation = "";
         text.includes("www.")
@@ -86,20 +83,31 @@ export function activate(context: vscode.ExtensionContext) {
           ? (validation = validation.concat("Add domain"))
           : (validation = validation.concat(" | Add domain"));
         return validation;
-      },
+      },*/
     });
     if (url === undefined) {
       return;
     }
-    url = "https://" + url + "/";
-    openSite(new TreeItem("", url, false));
+    var protocol = await vscode.window.showQuickPick(
+      [{ label: "https://" }, { label: "http://" }],
+      {
+        title: "Search site -",
+        placeHolder: "Site protocol",
+        canPickMany: false,
+      }
+    );
+    if (protocol === undefined) {
+      protocol = { label: "https://" };
+    }
+    url = protocol.label + url + "/";
+    openSite(new Site("", url, false));
   };
 
   function saveNewSite(name: string, url: string, pinned: boolean) {
-    var site = new TreeItem(name, url, pinned);
-    treeItems.push(site);
-    localStorage.saveSites(treeItems);
-    treeProvider.addTreeItem(new TreeItem(name, url, pinned));
+    var site = new Site(name, url, pinned);
+    sites.push(site);
+    localStorage.saveSites(sites);
+    treeProvider.addTreeItem(new Site(name, url, pinned));
   }
 
   const editSite = async (element: TreeItem, previousElement: TreeItem) => {
@@ -116,8 +124,8 @@ export function activate(context: vscode.ExtensionContext) {
             if (text === undefined || text.length === 0) {
               validation = "Insert a valid name";
             } else {
-              for (let treeItem of treeItems) {
-                if (treeItem.name === text) {
+              for (let site of sites) {
+                if (site.name === text) {
                   validation = "This name already exists";
                 }
               }
@@ -125,15 +133,13 @@ export function activate(context: vscode.ExtensionContext) {
             return validation;
           },
         });
-        resultName !== undefined
-          ? ((element.label = resultName), element.set(resultName))
-          : null;
+        resultName !== undefined ? (element.site.name = resultName) : null;
         break;
       case "Change url":
         let resultUrl = await vscode.window.showInputBox({
-          prompt: "Rename site - ",
+          prompt: "Edit site - ",
           placeHolder: "Site url | (www.sitename.domain)",
-          validateInput: (text) => {
+          /*validateInput: (text) => {
             var validation = "";
             text.includes("www.")
               ? ""
@@ -144,30 +150,36 @@ export function activate(context: vscode.ExtensionContext) {
               ? (validation = validation.concat("Add domain"))
               : (validation = validation.concat(" | Add domain"));
             return validation;
-          },
+          },*/
         });
         if (resultUrl !== undefined) {
-          resultUrl = "https://" + resultUrl + "/";
-          element.description = resultUrl;
-          element.set(undefined, resultUrl);
+          var protocol = await vscode.window.showQuickPick(
+            [{ label: "https://" }, { label: "http://" }],
+            {
+              title: "Edit site -",
+              placeHolder: "Site protocol",
+              canPickMany: false,
+            }
+          );
+          if (protocol === undefined) {
+            protocol = { label: "https://" };
+          }
+          resultUrl = protocol.label + resultUrl + "/";
+          element.site.url = resultUrl;
         }
         break;
     }
     let editIndex = -1;
-    for (let i = 0; i < treeItems.length; i++) {
-      if (
-        treeItems[i].get("name") === previousElement.get("name") &&
-        treeItems[i].get("url") === previousElement.get("url") &&
-        treeItems[i].get("pinned") === previousElement.get("pinned")
-      ) {
+    for (let i = 0; i < sites.length; i++) {
+      if (sites[i] === previousElement.site) {
         editIndex = i;
         break;
       }
     }
-    treeItems[editIndex] = element;
+    sites[editIndex] = element.site;
     console.log("Edit Site: " + element);
     treeProvider.editTreeItem(previousElement, element);
-    localStorage.saveSites(treeItems);
+    localStorage.saveSites(sites);
     vscode.window.showInformationMessage("Edited successfully");
   };
 
@@ -181,8 +193,8 @@ export function activate(context: vscode.ExtensionContext) {
         if (text === undefined || text.length === 0) {
           validation = "Insert a valid name";
         } else {
-          for (let treeItem of treeItems) {
-            if (treeItem.name === text) {
+          for (let site of sites) {
+            if (site.name === text) {
               validation = "This name already exists";
             }
           }
@@ -196,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
     let url = await vscode.window.showInputBox({
       prompt: "New site - ",
       placeHolder: "Site url | (www.sitename.domain)",
-      validateInput: (text) => {
+      /*validateInput: (text) => {
         //return text.includes("www.") ? "" : "Add www.";
         let validation = "";
         if (text === undefined || text.length === 0) {
@@ -211,40 +223,40 @@ export function activate(context: vscode.ExtensionContext) {
           ? (validation = validation.concat("Add domain"))
           : (validation = validation.concat(" | Add domain"));
         return validation;
-      },
+      },*/
     });
     if (url === undefined) {
       return;
     }
+    var protocol = await vscode.window.showQuickPick(
+      [{ label: "https://" }, { label: "http://" }],
+      {
+        title: "New site",
+        placeHolder: "Site protocol",
+        canPickMany: false,
+      }
+    );
+    if (protocol === undefined) {
+      protocol = { label: "https://" };
+    }
+    url = protocol.label + url + "/";
     vscode.window.showInformationMessage("Created " + name);
-    url = "https://" + url + "/";
     saveNewSite(name, url, true);
   };
 
-  const openSite = (site: TreeItem) => {
-    if (site.get("url") === "" || site.get("url") === undefined) {
+  const openSite = (site: Site) => {
+    if (site.url === "" || site.url === undefined) {
     } else {
       let currentPanel = vscode.window.createWebviewPanel(
-        site.get("name") === "" ? "Search results" : site.get("name"),
-        site.get("name") === "" ? "Search results" : site.get("name"),
+        site.url === "" ? "Search results" : site.url,
+        site.name === "" ? "Search results" : site.name,
         vscode.ViewColumn.One,
         {
           enableScripts: true,
         }
       );
-      currentPanel.webview.html = getWebViewContent(site.get("url"));
 
-      currentPanel.webview.onDidReceiveMessage(
-        (message) => {
-          switch (message.command) {
-            case "noconnection":
-              currentPanel.webview.html = getNoConnectionContent();
-              return;
-          }
-        },
-        undefined,
-        context.subscriptions
-      );
+      currentPanel.webview.html = getWebViewContent(site.url);
     }
   };
 
@@ -252,76 +264,24 @@ export function activate(context: vscode.ExtensionContext) {
     return (
       `<!DOCTYPE html>
 		<html lang="en">
-		<head>
-    <script>
-    function listenForIframe() {
-      vscode.postMessage({
-        command: 'noconnection',
-        text: 'noconnection'});
-      const iframe = document.getElementById("iframe");
-      var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-  
-      // Check if loading is complete
-      if (iframeDoc.readyState == 'complete') {
-      } else {
-        
-      
-      }
-      window.setTimeout(listenForIframe, 3000);
-  }
-    </script>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title></title>
-			<style>
-				body, html
-				  {
-					margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #fff;
-				  }
-			  </style>
-		</head>
-		<body>    
-		<iframe src="` +
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title></title>
+        <style>
+          body, html
+            {
+            margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #fff;
+            }
+          </style>
+      </head>
+      <body>
+        <iframe src="` +
       url +
       `" width="100%" height="100%" id="iframe"></iframe>
-		</body>
+      </body>
 		</html>`
     );
-  };
-
-  const getNoConnectionContent = () => {
-    return `<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title></title>
-			<style>
-				body, html {
-					margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #fff;
-				  }
-          h1 {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #121212;
-            text-align: center;
-          }
-          p {
-            font-size: 1em;
-            color: #121212;
-            text-align: center;
-          }
-          img {
-            width: 30%;
-            height: auto;
-          }
-			  </style>
-		</head>
-		<body>  
-		<h1>No internet connection<h1>
-    <p>Try reconnecting<p>
-		</body>
-		</html>`;
   };
 }
 

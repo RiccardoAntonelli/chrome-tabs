@@ -1,79 +1,19 @@
 import * as vscode from "vscode";
 import * as path from "path";
 
-export class TreeItem extends vscode.TreeItem {
+export class Site {
   name: string;
   url: string;
   pinned: boolean;
-
-  //Tree Item
-  contextValue: string;
-  description: string;
-  command: vscode.Command;
+  type: string = "site"; //TODO: implement folder
 
   constructor(name?: string, url?: string, pinned?: boolean) {
-    super(name ?? "", vscode.TreeItemCollapsibleState.None);
     this.name = name ?? "";
     this.url = url ?? "";
     this.pinned = pinned ?? false;
-    this.contextValue = "site";
-    this.description = url ?? "";
-    this.command = {
-      title: "View site",
-      command: "pinnedSites.openSite",
-      arguments: [this],
-    };
-    this.iconPath = {
-      light: path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        "globe.svg"
-      ),
-      dark: path.join(__filename, "..", "..", "resources", "dark", "globe.svg"),
-    };
   }
 
-  public get(key: string): any {
-    switch (key) {
-      case "name":
-        return this.name;
-      case "url":
-        return this.url;
-      case "pinned":
-        return this.pinned;
-    }
-  }
-
-  public set(name?: string, url?: string, pinned?: boolean): void {
-    this.name = name ?? this.name;
-    this.url = url ?? this.url;
-    this.pinned = pinned ?? this.pinned;
-    this.contextValue = "site";
-    this.description = url ?? this.url;
-    this.command = {
-      title: "View site",
-      command: "pinnedSites.openSite",
-      arguments: [this],
-    };
-    this.iconPath = {
-      light: path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        "globe.svg"
-      ),
-      dark: path.join(__filename, "..", "..", "resources", "dark", "globe.svg"),
-    };
-    super.label = name ?? this.name;
-    super.collapsibleState = vscode.TreeItemCollapsibleState.None;
-  }
-
-  public equals(other: TreeItem): boolean {
+  public equals(other: Site): boolean {
     if (
       this.name === other.name &&
       this.url === other.url &&
@@ -82,5 +22,39 @@ export class TreeItem extends vscode.TreeItem {
       return true;
     }
     return false;
+  }
+}
+
+export class TreeItem extends vscode.TreeItem {
+  site: Site;
+
+  //Tree Item
+  contextValue: string;
+  description: string;
+  command: vscode.Command;
+  children: TreeItem[];
+
+  constructor(site: Site) {
+    super(site.name, vscode.TreeItemCollapsibleState.None);
+    this.site = site;
+    this.contextValue = site.type;
+    this.description = site.url;
+    this.children = []; //TODO: implement folders
+    this.command = {
+      title: "View site",
+      command: "pinnedSites.openSite",
+      arguments: [this.site],
+    };
+    this.iconPath = {
+      light: path.join(
+        __filename,
+        "..",
+        "..",
+        "resources",
+        "light",
+        "globe.svg"
+      ),
+      dark: path.join(__filename, "..", "..", "resources", "dark", "globe.svg"),
+    };
   }
 }

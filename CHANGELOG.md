@@ -6,11 +6,17 @@ Change Log of Chrome Tabs extension
 
 - Initial release
 
-## [1.0.1] - 07-30/2022
+## [1.0.1] - 07/30/2022
 
 ### Added
 
 - Automatic load of extension
+
+## [1.0.2] - 07/31/2022
+
+### Added
+
+- Extension icon
 
 <!--
 Structure
