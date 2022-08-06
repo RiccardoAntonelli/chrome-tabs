@@ -1,19 +1,28 @@
 "use strict";
-import { log } from "console";
 import * as vscode from "vscode";
-import { LocalStorageService } from "./local_storage";
+import { LocalStorageProvider } from "./local_storage";
 import { Site, TreeItem } from "./site";
 
 export class ChromeTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
 {
-  constructor(localStorage: LocalStorageService) {
-    this.data = localStorage.getSites().map((site) => {
-      return new TreeItem(site);
-    });
+  data: TreeItem[];
+  localStorage: LocalStorageProvider;
+
+  constructor(localStorage: LocalStorageProvider) {
+    this.localStorage = localStorage;
+    this.data = this.loadData(this.localStorage);
   }
 
-  data: TreeItem[];
+  private loadData(localStorage: LocalStorageProvider): TreeItem[] {
+    return localStorage.getSites().map((site) => {
+      if (site instanceof Site) {
+        return new TreeItem(site as Site);
+      } else {
+        return new TreeItem(new Site());
+      } //TODO: manage folders
+    });
+  }
 
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined> =
     new vscode.EventEmitter<TreeItem | undefined>();
@@ -23,6 +32,7 @@ export class ChromeTreeProvider
 
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
+    this.data = this.loadData(this.localStorage);
   }
 
   getTreeItem(element: TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -44,16 +54,16 @@ export class ChromeTreeProvider
   }
 
   public addTreeItem(site: Site) {
-    this.data.push(
-      new TreeItem(
-        site
-      )
-    );
+    this.data.push(new TreeItem(site));
     this.refresh();
   }
 
   public editTreeItem(previousElement: TreeItem, element: TreeItem) {
-    this.data[this.data.indexOf(previousElement)] = element;
+    this.data[
+      this.data.findIndex((treeItem) => {
+        return treeItem.site.equals(previousElement.site);
+      })
+    ] = element;
     this.refresh();
   }
 }

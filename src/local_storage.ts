@@ -1,49 +1,50 @@
 "use strict";
 import { Memento } from "vscode";
-import { Site, TreeItem } from "./site";
+import { Folder, Site } from "./site";
 
-export class LocalStorageService {
+export class LocalStorageProvider {
   constructor(private storage: Memento) {
-    // Used to delete all data in json
+    // Delete all data in json
     //this.storage.update("Sites", "");
   }
 
-  public saveSites(data: Site[]) {
-    let json = "[";
-    if (data !== [] && data !== undefined) {
-      for (let item of data) {
-        json += JSON.stringify(item);
-        json += ";";
-      }
-      json = json.substring(0, json.length - 2);
-    }
-    json = json + "]";
-    console.log(json);
+  public saveSites(data: (Site | Folder)[]) {
+    let json = JSON.stringify(data);
     this.storage.update("Sites", json);
   }
 
-  public getSites(): Site[] {
-    let sites: Site[] = [];
+  public getSites(): (Site | Folder)[] {
+    let sites: (Site | Folder)[] = [];
     let json = this.storage.get<string>("Sites", "");
 
-    let jsons: string[];
-    if (json === "[]" || json === "") {
+    if (json === undefined || json === "") {
       return [];
     }
-    if (json.includes(";")) {
-      jsons = json.substring(1, json.length).split(";");
-    } else {
-      jsons = [json.substring(1, json.length)];
-    }
-    console.log(jsons.toString());
 
-    jsons.forEach((value, index) => {
-      let result = Object.assign(new Site(), JSON.parse(value));
-      result.set();
-      sites[index] = result;
-      console.log(result);
-    });
+    let jsons: Object[] = JSON.parse(json);
+
+    if (!jsons.every((object) => !object.hasOwnProperty("command"))) {
+      //Old system
+      this.storage.update("Sites", "");
+      return [];
+    }
+
+    sites = parseObjectList(jsons);
 
     return sites;
   }
 }
+
+const parseObjectList = (json: Object[]): (Site | Folder)[] => {
+  return json.map((value) => {
+    let result: Site | Folder;
+    if (value.hasOwnProperty("url" as PropertyKey)) {
+      return Object.assign(new Site(), value);
+    } else {
+      result = new Folder();
+      result.name = (value as Folder).name;
+      result.sites = parseObjectList((value as Folder).sites);
+      return result;
+    }
+  });
+};

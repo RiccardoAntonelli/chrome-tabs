@@ -1,13 +1,15 @@
 "use strict";
 import * as vscode from "vscode";
 import { ChromeTreeProvider } from "./tree_provider";
-import { LocalStorageService } from "./local_storage";
-import { Site, TreeItem } from "./site";
+import { LocalStorageProvider } from "./local_storage";
+import { Folder, Site, TreeItem } from "./site";
+import { PopupProvider } from "./popup_provider";
+import { WebviewProvider } from "./webview_provider";
 
 export function activate(context: vscode.ExtensionContext) {
-  var localStorage = new LocalStorageService(context.workspaceState);
+  var localStorage = new LocalStorageProvider(context.workspaceState);
 
-  var sites: Site[];
+  var sites: (Site | Folder)[];
   sites = localStorage.getSites();
 
   var treeProvider = new ChromeTreeProvider(localStorage);
@@ -31,28 +33,40 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "pinnedSites.editSite",
       (node: TreeItem) => {
-        const previousElement = node;
-        editSite(node, previousElement);
+        const previousSite = node.site;
+        editSite(
+          new TreeItem(
+            new Site(previousSite.name, previousSite.url, previousSite.protocol)
+          ),
+          node
+        );
       }
     )
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("pinnedSites.deleteSite", (node: Site) => {
-      treeProvider.deleteTreeItem(new TreeItem(node));
-      let deleteIndex = -1;
-      for (let i = 0; i < sites.length; i++) {
-        if (sites[i].equals(node)) {
-          deleteIndex = i;
-          break;
+    vscode.commands.registerCommand(
+      "pinnedSites.deleteSite",
+      (node: TreeItem) => {
+        treeProvider.deleteTreeItem(node);
+        let deleteIndex = -1;
+        for (let i = 0; i < sites.length; i++) {
+          if (
+            sites[i] instanceof Site &&
+            (sites[i] as Site).equals(node.site)
+          ) {
+            deleteIndex = i;
+            break;
+          }
         }
+        vscode.window.showInformationMessage(
+          "Deleted " + sites[deleteIndex].name
+        );
+        sites.splice(deleteIndex, 1);
+        localStorage.saveSites(sites);
+        treeProvider.refresh();
       }
-      vscode.window.showInformationMessage(
-        "Deleted " + sites[deleteIndex].name
-      );
-      delete sites[deleteIndex];
-      localStorage.saveSites(sites);
-    })
+    )
   );
 
   context.subscriptions.push(
@@ -68,46 +82,24 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const searchAndOpenSite = async () => {
-    var url = await vscode.window.showInputBox({
-      prompt: "Search site - ",
-      placeHolder: "Site url | (www.sitename.domain)",
-      /*validateInput: (text) => {
-        //return text.includes("www.") ? "" : "Add www.";
-        var validation = "";
-        text.includes("www.")
-          ? ""
-          : (validation = validation.concat("Add www."));
-        text.substring(4, text.length).includes(".")
-          ? ""
-          : validation.length === 0
-          ? (validation = validation.concat("Add domain"))
-          : (validation = validation.concat(" | Add domain"));
-        return validation;
-      },*/
-    });
+    let url = await PopupProvider.showUrlPopup("Search site");
     if (url === undefined) {
       return;
     }
-    var protocol = await vscode.window.showQuickPick(
-      [{ label: "https://" }, { label: "http://" }],
-      {
-        title: "Search site -",
-        placeHolder: "Site protocol",
-        canPickMany: false,
-      }
-    );
+
+    let protocol = await PopupProvider.showProtocolPopup("Search site");
     if (protocol === undefined) {
-      protocol = { label: "https://" };
+      return;
     }
-    url = protocol.label + url + "/";
-    openSite(new Site("", url, false));
+
+    openSite(new Site("", url, protocol));
   };
 
-  function saveNewSite(name: string, url: string, pinned: boolean) {
-    var site = new Site(name, url, pinned);
+  function saveNewSite(name: string, url: string, protocol: string) {
+    let site = new Site(name, url, protocol);
     sites.push(site);
     localStorage.saveSites(sites);
-    treeProvider.addTreeItem(new Site(name, url, pinned));
+    treeProvider.addTreeItem(site);
   }
 
   const editSite = async (element: TreeItem, previousElement: TreeItem) => {
@@ -115,174 +107,76 @@ export function activate(context: vscode.ExtensionContext) {
     let result = await vscode.window.showQuickPick(options);
     switch (result) {
       case "Rename":
-        let resultName = await vscode.window.showInputBox({
-          prompt: "Rename site - ",
-          placeHolder: "Site name",
-          validateInput: (text) => {
-            let validation = "";
-
-            if (text === undefined || text.length === 0) {
-              validation = "Insert a valid name";
-            } else {
-              for (let site of sites) {
-                if (site.name === text) {
-                  validation = "This name already exists";
-                }
-              }
-            }
-            return validation;
-          },
-        });
-        resultName !== undefined ? (element.site.name = resultName) : null;
+        let name = await PopupProvider.showNamePopup(
+          "Edit site",
+          previousElement.site.name,
+          sites
+        );
+        if (name === undefined) {
+          return;
+        }
+        element.site.name = name;
         break;
       case "Change url":
-        let resultUrl = await vscode.window.showInputBox({
-          prompt: "Edit site - ",
-          placeHolder: "Site url | (www.sitename.domain)",
-          /*validateInput: (text) => {
-            var validation = "";
-            text.includes("www.")
-              ? ""
-              : (validation = validation.concat("Add www."));
-            text.substring(4, text.length).includes(".")
-              ? ""
-              : validation.length === 0
-              ? (validation = validation.concat("Add domain"))
-              : (validation = validation.concat(" | Add domain"));
-            return validation;
-          },*/
-        });
-        if (resultUrl !== undefined) {
-          var protocol = await vscode.window.showQuickPick(
-            [{ label: "https://" }, { label: "http://" }],
-            {
-              title: "Edit site -",
-              placeHolder: "Site protocol",
-              canPickMany: false,
-            }
-          );
-          if (protocol === undefined) {
-            protocol = { label: "https://" };
-          }
-          resultUrl = protocol.label + resultUrl + "/";
-          element.site.url = resultUrl;
+        let url = await PopupProvider.showUrlPopup(
+          "Edit site",
+          previousElement.site.url
+        );
+        if (url === undefined) {
+          return;
         }
+
+        let protocol = await PopupProvider.showProtocolPopup(
+          "Edit site",
+          previousElement.site.protocol
+        );
+        if (protocol === undefined) {
+          return;
+        }
+        url = url;
+        element.site.url = url;
+        element.site.protocol = protocol;
         break;
     }
-    let editIndex = -1;
-    for (let i = 0; i < sites.length; i++) {
-      if (sites[i] === previousElement.site) {
-        editIndex = i;
-        break;
-      }
-    }
+
+    let editIndex = sites.findIndex((site) => {
+      return (
+        site instanceof Site && (site as Site).equals(previousElement.site)
+      );
+    });
+    console.log("Edit previous site:" + previousElement.site);
     sites[editIndex] = element.site;
-    console.log("Edit Site: " + element);
-    treeProvider.editTreeItem(previousElement, element);
+    console.log("Edit index: " + editIndex);
     localStorage.saveSites(sites);
+    treeProvider.editTreeItem(previousElement, element);
+
+    console.log("Edit Site: " + element.site);
     vscode.window.showInformationMessage("Edited successfully");
   };
 
   const addNewSite = async (): Promise<any> => {
-    let name = await vscode.window.showInputBox({
-      prompt: "New site - ",
-      placeHolder: "Site name",
-      validateInput: (text) => {
-        let validation = "";
-
-        if (text === undefined || text.length === 0) {
-          validation = "Insert a valid name";
-        } else {
-          for (let site of sites) {
-            if (site.name === text) {
-              validation = "This name already exists";
-            }
-          }
-        }
-        return validation;
-      },
-    });
+    let name = await PopupProvider.showNamePopup("New site", "", sites);
     if (name === undefined) {
       return;
     }
-    let url = await vscode.window.showInputBox({
-      prompt: "New site - ",
-      placeHolder: "Site url | (www.sitename.domain)",
-      /*validateInput: (text) => {
-        //return text.includes("www.") ? "" : "Add www.";
-        let validation = "";
-        if (text === undefined || text.length === 0) {
-          validation = "Insert a valid address";
-        }
-        text.includes("www.")
-          ? ""
-          : (validation = validation.concat("Add www."));
-        text.substring(4, text.length).includes(".")
-          ? ""
-          : validation.length === 0
-          ? (validation = validation.concat("Add domain"))
-          : (validation = validation.concat(" | Add domain"));
-        return validation;
-      },*/
-    });
+
+    let url = await PopupProvider.showUrlPopup("New site");
     if (url === undefined) {
       return;
     }
-    var protocol = await vscode.window.showQuickPick(
-      [{ label: "https://" }, { label: "http://" }],
-      {
-        title: "New site",
-        placeHolder: "Site protocol",
-        canPickMany: false,
-      }
-    );
+
+    let protocol = await PopupProvider.showProtocolPopup("New site");
     if (protocol === undefined) {
-      protocol = { label: "https://" };
+      return;
     }
-    url = protocol.label + url + "/";
+
     vscode.window.showInformationMessage("Created " + name);
-    saveNewSite(name, url, true);
+    saveNewSite(name, url, protocol);
   };
 
-  const openSite = (site: Site) => {
-    if (site.url === "" || site.url === undefined) {
-    } else {
-      let currentPanel = vscode.window.createWebviewPanel(
-        site.url === "" ? "Search results" : site.url,
-        site.name === "" ? "Search results" : site.name,
-        vscode.ViewColumn.One,
-        {
-          enableScripts: true,
-        }
-      );
-
-      currentPanel.webview.html = getWebViewContent(site.url);
-    }
-  };
-
-  const getWebViewContent = (url: string) => {
-    return (
-      `<!DOCTYPE html>
-		<html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title></title>
-        <style>
-          body, html
-            {
-            margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #fff;
-            }
-          </style>
-      </head>
-      <body>
-        <iframe src="` +
-      url +
-      `" width="100%" height="100%" id="iframe"></iframe>
-      </body>
-		</html>`
-    );
-  };
+  function openSite(site: Site) {
+    new WebviewProvider(site);
+  }
 }
 
 export function deactivate() {}

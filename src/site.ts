@@ -1,27 +1,54 @@
+"use strict";
 import * as vscode from "vscode";
 import * as path from "path";
 
 export class Site {
   name: string;
   url: string;
-  pinned: boolean;
-  type: string = "site"; //TODO: implement folder
+  protocol: string;
 
-  constructor(name?: string, url?: string, pinned?: boolean) {
+  constructor(name?: string, url?: string, protocol?: string) {
     this.name = name ?? "";
     this.url = url ?? "";
-    this.pinned = pinned ?? false;
+    this.protocol = protocol ?? "";
   }
 
   public equals(other: Site): boolean {
     if (
       this.name === other.name &&
       this.url === other.url &&
-      this.pinned === other.pinned
+      this.protocol === other.protocol
     ) {
       return true;
     }
     return false;
+  }
+
+  public toString(): string {
+    return `Site{name: ${this.name}, url: ${this.url}, protocol: ${this.protocol}}`;
+  }
+}
+
+export class Folder {
+  name: string;
+  sites: (Site | Folder)[];
+
+  constructor(name?: string, sites?: (Site | Folder)[]) {
+    this.name = name ?? "";
+    this.sites = sites ?? [];
+  }
+
+  public equals(other: Folder): boolean {
+    if (this.name === other.name && this.sites === other.sites) {
+      return this.sites.every((site, index) => {
+        return site === other.sites[index];
+      });
+    }
+    return false;
+  }
+
+  public toString(): string {
+    return `Folder{name: ${this.name}, sites: ${this.sites}}`;
   }
 }
 
@@ -34,11 +61,11 @@ export class TreeItem extends vscode.TreeItem {
   command: vscode.Command;
   children: TreeItem[];
 
-  constructor(site: Site) {
+  constructor(site: Site /*TODO: Site|Folder */) {
     super(site.name, vscode.TreeItemCollapsibleState.None);
     this.site = site;
-    this.contextValue = site.type;
-    this.description = site.url;
+    this.contextValue = "site"; //TODO: implement folders
+    this.description = site.protocol + site.url;
     this.children = []; //TODO: implement folders
     this.command = {
       title: "View site",
