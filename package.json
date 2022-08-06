@@ -4,9 +4,9 @@
 	"description": "An extension that lets you have chrome tabs in VS Code",
 	"publisher": "RiccardoAntonelli",
 	"icon": "resources/icon.png",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"engines": {
-		"vscode": "^1.69.0"
+		"vscode": "^1.70.0"
 	},
 	"repository": {
 		"type": "git",
@@ -136,8 +136,5 @@
 		"mocha": "^8.4.0",
 		"typescript": "^4.3.2",
 		"vscode-test": "^1.5.2"
-	},
-	"dependencies": {
-		"flatted": "^3.2.6"
 	}
 }
