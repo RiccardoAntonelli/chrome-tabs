@@ -5,7 +5,7 @@ import { Folder, Site } from "./site";
 export class LocalStorageProvider {
   constructor(private storage: Memento) {
     // Delete all data in json
-    //this.storage.update("Sites", "");
+    // this.storage.update("Sites", "");
   }
 
   public saveSites(data: (Site | Folder)[]) {
@@ -21,7 +21,15 @@ export class LocalStorageProvider {
       return [];
     }
 
-    let jsons: Object[] = JSON.parse(json);
+    let jsons: Object[];
+
+    try {
+      jsons = JSON.parse(json);
+    } catch (e) {
+      console.log(e);
+      this.storage.update("Sites", "");
+      return [];
+    }
 
     if (!jsons.every((object) => !object.hasOwnProperty("command"))) {
       //Old system
