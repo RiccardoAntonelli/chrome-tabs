@@ -2,13 +2,15 @@
 import { log } from "console";
 import * as vscode from "vscode";
 import { LocalStorageService } from "./local_storage";
-import { TreeItem } from "./site";
+import { Site, TreeItem } from "./site";
 
 export class ChromeTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
 {
   constructor(localStorage: LocalStorageService) {
-    this.data = localStorage.getSites();
+    this.data = localStorage.getSites().map((site) => {
+      return new TreeItem(site);
+    });
   }
 
   data: TreeItem[];
@@ -33,7 +35,7 @@ export class ChromeTreeProvider
     if (element === undefined) {
       return this.data;
     }
-    return element.get("children");
+    return element.children;
   }
 
   public deleteTreeItem(element: TreeItem) {
@@ -41,12 +43,10 @@ export class ChromeTreeProvider
     this.refresh();
   }
 
-  public addTreeItem(site: TreeItem) {
+  public addTreeItem(site: Site) {
     this.data.push(
       new TreeItem(
-        site.get("name"),
-        site.get("url"),
-        site.get("pinned"),
+        site
       )
     );
     this.refresh();

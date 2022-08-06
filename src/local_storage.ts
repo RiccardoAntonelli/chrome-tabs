@@ -1,19 +1,18 @@
 "use strict";
-import { stringify, parse } from "flatted";
 import { Memento } from "vscode";
-import { TreeItem } from "./site";
+import { Site, TreeItem } from "./site";
 
 export class LocalStorageService {
   constructor(private storage: Memento) {
     // Used to delete all data in json
-    // this.storage.update("Sites", "");
+    //this.storage.update("Sites", "");
   }
 
-  public saveSites(data: TreeItem[]) {
+  public saveSites(data: Site[]) {
     let json = "[";
     if (data !== [] && data !== undefined) {
       for (let item of data) {
-        json += stringify(item);
+        json += JSON.stringify(item);
         json += ";";
       }
       json = json.substring(0, json.length - 2);
@@ -23,8 +22,8 @@ export class LocalStorageService {
     this.storage.update("Sites", json);
   }
 
-  public getSites(): TreeItem[] {
-    let sites: TreeItem[] = [];
+  public getSites(): Site[] {
+    let sites: Site[] = [];
     let json = this.storage.get<string>("Sites", "");
 
     let jsons: string[];
@@ -39,7 +38,7 @@ export class LocalStorageService {
     console.log(jsons.toString());
 
     jsons.forEach((value, index) => {
-      let result = Object.assign(new TreeItem(), parse(value));
+      let result = Object.assign(new Site(), JSON.parse(value));
       result.set();
       sites[index] = result;
       console.log(result);
