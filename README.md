@@ -22,6 +22,8 @@ Every saved website has two buttons:
 
 ## Known Issues
 
+- [x] Can't save a site with an url not containing www
+
 ## Release Notes
 
 [Release notes](https://github.com/RiccardoAntonelli/chrome-tabs/blob/master/CHANGELOG.md)
