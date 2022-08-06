@@ -29,7 +29,7 @@ Change Log of Chrome Tabs extension
 
 ### Changed
 
-- Data structure, (with this update all sites will be erased)
+- Data structure (reason for data erasure)
 - Extension icon
 
 ### Removed
