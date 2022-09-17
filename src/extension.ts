@@ -82,16 +82,41 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const searchAndOpenSite = async () => {
-    let url = await PopupProvider.showUrlPopup("Search site");
-    if (url === undefined) {
-      return;
-    }
+    let options = ["Search with Google", "Open site"];
+    let result = await vscode.window.showQuickPick(options);
+    let url = "",
+      protocol = "";
 
-    let protocol = await PopupProvider.showProtocolPopup("Search site");
-    if (protocol === undefined) {
-      return;
-    }
+    switch (result) {
+      case "Search with Google":
+        let query = await PopupProvider.showSearchPopup("Search with Google");
 
+        if (query === undefined) {
+          return;
+        }
+
+        protocol = "https://";
+        url =
+          "www.google.com/search?q=" +
+          query.replaceAll(" ", "+") +
+          "&output=embed";
+        break;
+      case "Open website":
+        let result = await PopupProvider.showUrlPopup("Open site");
+        if (result === undefined) {
+          return;
+        }
+        url = result;
+
+        result = await PopupProvider.showProtocolPopup("Open site");
+        if (result === undefined) {
+          return;
+        }
+        protocol = result;
+        break;
+      default:
+        return;
+    }
     openSite(new Site("", url, protocol));
   };
 
@@ -175,7 +200,7 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   function openSite(site: Site) {
-    new WebviewProvider(site);
+    new WebviewProvider(site, context);
   }
 }
 

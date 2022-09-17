@@ -82,4 +82,20 @@ export abstract class PopupProvider {
     });
     return url;
   }
+
+  public static async showSearchPopup(title: string) {
+    let query = await vscode.window.showInputBox({
+      prompt: `${title} - `,
+      placeHolder: "Search string",
+      value: "",
+      validateInput: (text) => {
+        let validation = "";
+        if (text === undefined || text.length === 0) {
+          validation = "Insert a string to search";
+        }
+        return validation;
+      },
+    });
+    return query;
+  }
 }
